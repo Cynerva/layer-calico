@@ -1,5 +1,5 @@
 [Unit]
-Description=calicoctl node
+Description=calico node
 After=docker.service
 Requires=docker.service
 
@@ -10,7 +10,26 @@ Environment=ETCD_CA_CERT_FILE={{ etcd_ca_path }}
 Environment=ETCD_CERT_FILE={{ etcd_cert_path }}
 Environment=ETCD_KEY_FILE={{ etcd_key_path }}
 PermissionsStartOnly=true
-ExecStart=/opt/calicoctl/calicoctl node --detach=false --ip {{ ip }}
+ExecStart=/usr/bin/docker run --net=host --privileged --name=calico-node \
+  -e ETCD_ENDPOINTS=${ETCD_ENDPOINTS} \
+  -e ETCD_CA_CERT_FILE=${ETCD_CA_CERT_FILE} \
+  -e ETCD_CERT_FILE=${ETCD_CERT_FILE} \
+  -e ETCD_KEY_FILE=${ETCD_KEY_FILE} \
+  -e NODENAME=${HOSTNAME} \
+  -e IP={{ ip }} \
+  -e NO_DEFAULT_POOLS= \
+  -e AS= \
+  -e CALICO_LIBNETWORK_ENABLED=true \
+  -e IP6= \
+  -e CALICO_NETWORKING_BACKEND=bird \
+  -e FELIX_DEFAULTENDPOINTTOHOSTACTION=ACCEPT \
+  -v /var/run/calico:/var/run/calico \
+  -v /lib/modules:/lib/modules \
+  -v /run/docker/plugins:/run/docker/plugins \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /var/log/calico:/var/log/calico \
+  quay.io/calico/node:v1.1.0
+ExecStop=/usr/bin/docker rm -f calico-node
 Restart=always
 RestartSec=10
 
